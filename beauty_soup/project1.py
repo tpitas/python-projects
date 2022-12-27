@@ -96,10 +96,7 @@ def uploaded_all_files_to_s3(params):
         logging.info(f"Error {e} occurred during upload of files from server to s3 ")
 
 def s3_upload(filename, params):
-    """ 
-    upload each file to s3 bucket
-    """
-
+    """ upload each file to s3 bucket """    
     local_file = params.path + filename
     s3_name = params.s3_key + filename
 
@@ -118,11 +115,31 @@ def s3_upload(filename, params):
     except Exception as e:
         logging.info(f'{filename} failed to upload with error: {e}')
 
+def s3_list_contents(params):
+    """ 
+    print out all contents in this bucket 
+    """
+
+    s3_client = boto3.client('s3')
+
+    # using paginator 
+    paginator = s3_client.get_paginator('list_objects_v2')
+    pages = paginator.paginate(Bucket=params.s3_bucket, StartAfter=params.s3_key, Prefix=params.s3_key)
+
+    myl_s3_file_list = []
+
+    # each_reponse is a dictionary with a number of fields
+    for each_reponse in pages:
+        for each_object in each_reponse['Contents']:
+            if fnmatch.fnmatch(each_object['key'], params.file_pattern):
+                myl_s3_file_list.append(each_object["key"])
+
+    logging.info(f"contents in s3 folder: {myl_s3_file_list}")
 
 def main(args):
     with requests.Session() as s:
         logging.info("file pull starting")
-        logging.info("going to login")
+        logging.info("going to login url")
         response = get(s, start_url)
 
         token.s.cookies
@@ -145,6 +162,14 @@ def main(args):
 
     # upload files to file
     uploaded_all_files_to_s3(args)
+
+    # print out contents of s3 folder
+    s3_list_contents(args)
+
+    for z in valid_filename_list:
+        print(f"what is in the file: {z}")
+    
+    logging.info("hello")
 
 
 if __name__ == "__main__":
